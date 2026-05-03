@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dona_db
+    username: dona_user
+    password: dona_pass
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/ims_signals
+    redis:
+      host: localhost
+      port: 6379
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.ims.backend: DEBUG
