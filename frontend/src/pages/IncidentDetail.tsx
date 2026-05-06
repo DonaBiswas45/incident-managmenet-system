@@ -60,7 +60,7 @@ export default function IncidentDetail() {
       >← Back</button>
 
       <h2>{workItem.title}</h2>
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+      <div style={{  flexWrap: 'wrap' , background: '#1e293b', padding: '16px', borderRadius: '12px', marginBottom: '16px'  }}>
         <span>Priority: <strong style={{ color: workItem.priority === 'P0' ? '#ff4444' : '#fff' }}>{workItem.priority}</strong></span>
         <span>Status: <strong>{workItem.status}</strong></span>
         <span>Signals: <strong>{workItem.signalCount}</strong></span>
