@@ -5,6 +5,10 @@ import com.ims.backend.model.StatusHistory;
 import com.ims.backend.model.WorkItem;
 import com.ims.backend.service.WorkItemService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,8 +25,11 @@ public class WorkItemController {
     private final WorkItemService workItemService;
 
     @GetMapping
-    public ResponseEntity<List<WorkItem>> getAllWorkItems() {
-        return ResponseEntity.ok(workItemService.getAllWorkItems());
+    public ResponseEntity<List<WorkItem>> getAllWorkItems(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        // Now the parameters are correctly placed in the method signature
+        return ResponseEntity.ok(workItemService.getAllWorkItems(page, size));
     }
 
     @GetMapping("/{id}")

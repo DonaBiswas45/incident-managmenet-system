@@ -42,14 +42,19 @@ public class SignalIngestionService {
 
     // Throughput tracking
     private final AtomicInteger signalCounter = new AtomicInteger(0);
+     // Retry config
+    private static final int MAX_RETRIES = 3;
+    private static final long RETRY_DELAY_MS = 500;
 
+    // Multiple worker threads — handles MongoDB slowness
+    private static final int WORKER_THREADS = 4;
     public SignalIngestionService(SignalRepository signalRepository,
                                    WorkItemRepository workItemRepository,
                                    AlertService alertService) {
         this.signalRepository = signalRepository;
         this.workItemRepository = workItemRepository;
         this.alertService = alertService;
-        startAsyncWorker();
+        startAsyncWorkers();
         startMetricsPrinter();
         startTokenRefiller();
     }
@@ -98,26 +103,58 @@ public class SignalIngestionService {
         Executors.newSingleThreadScheduledExecutor()
             .scheduleAtFixedRate(() -> {
                 int count = signalCounter.getAndSet(0);
-                log.info("Throughput: {} signals in last 5 seconds ({} signals/sec)",
-                    count, count / 5);
+                log.info("Throughput: {} signals in last 5 seconds ({} signals/sec) | Buffer: {}/50000",
+                    count, count / 5, signalBuffer.size());
             }, 5, 5, TimeUnit.SECONDS);
     }
 
-    private void startAsyncWorker() {
-        Executors.newSingleThreadExecutor().submit(() -> {
-            while (true) {
-                try {
-                    Signal signal = signalBuffer.take();
-                    processSignal(signal);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (Exception e) {
-                    log.error("Error processing signal: {}", e.getMessage());
+private void startAsyncWorkers() {
+        ExecutorService workerPool = Executors.newFixedThreadPool(WORKER_THREADS);
+        for (int i = 0; i < WORKER_THREADS; i++) {
+            final int workerId = i;
+            workerPool.submit(() -> {
+                log.info("Signal worker {} started", workerId);
+                while (true) {
+                    try {
+                        Signal signal = signalBuffer.take();
+                        processSignalWithRetry(signal);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    } catch (Exception e) {
+                        log.error("Worker {} error: {}", workerId, e.getMessage());
+                    }
+                }
+            });
+        }
+    }
+
+     // Retry logic — retries up to 3 times if DB write fails
+    private void processSignalWithRetry(Signal signal) {
+        int attempts = 0;
+        while (attempts < MAX_RETRIES) {
+            try {
+                processSignal(signal);
+                return; // success
+            } catch (Exception e) {
+                attempts++;
+                if (attempts >= MAX_RETRIES) {
+                    log.error("Failed to process signal after {} retries. Component: {}. Error: {}",
+                        MAX_RETRIES, signal.getComponentId(), e.getMessage());
+                } else {
+                    log.warn("Retry {}/{} for signal. Component: {}",
+                        attempts, MAX_RETRIES, signal.getComponentId());
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS * attempts); // exponential backoff
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
-        });
+        }
     }
+    
 
     private void processSignal(Signal signal) {
         String componentId = signal.getComponentId();

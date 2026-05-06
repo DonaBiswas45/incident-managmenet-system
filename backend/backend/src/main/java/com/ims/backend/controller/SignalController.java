@@ -1,12 +1,14 @@
 package com.ims.backend.controller;
 
 import com.ims.backend.model.Signal;
-import com.ims.backend.service.SignalIngestionService;
 import com.ims.backend.repository.mongo.SignalRepository;
+import com.ims.backend.service.SignalIngestionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -19,7 +21,7 @@ public class SignalController {
     private final SignalRepository signalRepository;
 
     @PostMapping
-    public ResponseEntity<String> ingestSignal(@RequestBody Signal signal) {
+    public ResponseEntity<String> ingestSignal(@Valid @RequestBody Signal signal) {
         boolean accepted = signalIngestionService.ingest(signal);
         if (!accepted) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)

@@ -8,6 +8,8 @@ import com.ims.backend.repository.jpa.StatusHistoryRepository;
 import com.ims.backend.repository.jpa.WorkItemRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,11 +29,20 @@ public class WorkItemService {
     private final DashboardCacheService dashboardCacheService;
     private final WorkItemStateService workItemStateService;
 
-    public List<WorkItem> getAllWorkItems() {
-        List<WorkItem> cached = dashboardCacheService.getActiveIncidents();
-        if (cached != null) return cached;
-        List<WorkItem> fromDb = workItemRepository.findAllByOrderByCreatedAtDesc();
-        dashboardCacheService.updateActiveIncidents(fromDb);
+    // With pagination — default page 0, size 20
+    public List<WorkItem> getAllWorkItems(int page, int size) {
+        // Only use cache for first page
+        if (page == 0) {
+            List<WorkItem> cached = dashboardCacheService.getActiveIncidents();
+            if (cached != null) return cached;
+        }
+        List<WorkItem> fromDb = workItemRepository
+            .findAllByOrderByCreatedAtDesc(
+                PageRequest.of(page, size, Sort.by("createdAt").descending())
+            ).getContent();
+        if (page == 0) {
+            dashboardCacheService.updateActiveIncidents(fromDb);
+        }
         return fromDb;
     }
 
@@ -49,7 +60,6 @@ public class WorkItemService {
         WorkItem workItem = getWorkItemById(workItemId);
         WorkItemStatus oldStatus = workItem.getStatus();
 
-        // RCA check before CLOSED
         if (newStatus == WorkItemStatus.CLOSED) {
             boolean rcaComplete = rcaRepository.existsByWorkItemIdAndIsCompleteTrue(workItemId);
             if (!rcaComplete) {
@@ -57,7 +67,6 @@ public class WorkItemService {
             }
         }
 
-        // State Pattern validates transition
         workItemStateService.transition(workItem, newStatus);
 
         workItem.setStatus(newStatus);
