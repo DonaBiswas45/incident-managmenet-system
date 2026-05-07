@@ -2,7 +2,7 @@ import axios from 'axios';
 import { WorkItem, Signal, Rca, StatusHistory } from '../types';
 
 const api = axios.create({
-  baseURL: 'https://bug-free-doodle-rxwvwpj6r46h5wrq-8080.app.github.dev',
+   baseURL: process.env.REACT_APP_API_URL,
 });
 
 export const getWorkItems = () =>
