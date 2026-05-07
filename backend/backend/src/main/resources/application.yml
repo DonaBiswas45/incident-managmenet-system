@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/dona_db
-    username: dona_user
-    password: dona_pass
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/dona_db}
+    username: ${SPRING_DATASOURCE_USERNAME:dona_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:dona_pass}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -11,13 +11,12 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
   data:
     mongodb:
-      uri: mongodb://localhost:27017/ims_signals
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/ims_signals}
     redis:
-      host: localhost
-      port: 6379
+      url: ${REDIS_URL:redis://localhost:6379}
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 logging:
   level:
